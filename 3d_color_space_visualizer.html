@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Color Space Visualizer | Digital Image Processing & Color Science</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0a0d14',
+                        cardbg: 'rgba(18, 24, 38, 0.75)',
+                        panelborder: 'rgba(255, 255, 255, 0.1)',
+                        accent: '#3b82f6',
+                        accentglow: 'rgba(59, 130, 246, 0.3)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom scrollbars & glassmorphism */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 13, 20, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        
+        .glass-panel {
+            background: rgba(15, 22, 36, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s ease;
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(37, 99, 235, 0.1));
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Custom slider styles */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            height: 6px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .canvas-hud {
+            pointer-events: none;
+        }
+        .canvas-hud * {
+            pointer-events: auto;
+        }
+
+        /* Pulse ring animation */
+        @keyframes pulseRing {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-element {
+            animation: pulseRing 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-200 font-sans h-screen w-screen overflow-hidden flex flex-col select-none">
+
+    <!-- Top Header -->
+    <header class="h-14 border-b border-white/10 glass-panel px-4 flex items-center justify-between z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <i data-lucide="box" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-wide bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    3D Color Space Visualizer
+                </h1>
+                <p class="text-[10px] text-slate-400 -mt-0.5 font-mono">Digital Image Processing & Color Science Suite</p>
+            </div>
+        </div>
+
+        <!-- Header Quick Preset Palette -->
+        <div class="hidden md:flex items-center space-x-1.5 bg-black/30 p-1.5 rounded-lg border border-white/5">
+            <span class="text-xs text-slate-400 mr-1.5 font-medium px-1">Presets:</span>
+            <button onclick="setPresetColor(255, 0, 0)" class="w-6 h-6 rounded bg-red-500 hover:scale-110 transition-transform shadow" title="Red"></button>
+            <button onclick="setPresetColor(0, 255, 0)" class="w-6 h-6 rounded bg-green-500 hover:scale-110 transition-transform shadow" title="Green"></button>
+            <button onclick="setPresetColor(0, 0, 255)" class="w-6 h-6 rounded bg-blue-500 hover:scale-110 transition-transform shadow" title="Blue"></button>
+            <button onclick="setPresetColor(255, 255, 0)" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform shadow" title="Yellow"></button>
+            <button onclick="setPresetColor(0, 255, 255)" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform shadow" title="Cyan"></button>
+            <button onclick="setPresetColor(255, 0, 255)" class="w-6 h-6 rounded bg-magenta-500 hover:scale-110 transition-transform shadow" title="Magenta"></button>
+            <button onclick="setPresetColor(255, 255, 255)" class="w-6 h-6 rounded bg-white hover:scale-110 transition-transform shadow" title="White"></button>
+            <button onclick="setPresetColor(0, 0, 0)" class="w-6 h-6 rounded bg-black border border-white/20 hover:scale-110 transition-transform shadow" title="Black"></button>
+            <button onclick="setPresetColor(255, 128, 0)" class="w-6 h-6 rounded bg-orange-500 hover:scale-110 transition-transform shadow" title="Orange"></button>
+            <button onclick="setPresetColor(128, 128, 128)" class="w-6 h-6 rounded bg-gray-500 hover:scale-110 transition-transform shadow" title="Mid Gray"></button>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button id="btnAutoRotate" onclick="toggleAutoRotate()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 flex items-center space-x-1.5 transition">
+                <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-blue-400"></i>
+                <span id="autoRotateText">Auto-Rotate</span>
+            </button>
+            <button onclick="resetCameraView()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 flex items-center space-x-1.5 transition" title="Reset View">
+                <i data-lucide="compass" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Reset View</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- Left Panel: Controls & Visual Settings -->
+        <aside class="w-80 lg:w-88 glass-panel border-r border-white/10 flex flex-col z-20 shrink-0 overflow-y-auto p-4 space-y-5">
+            
+            <!-- Color Space Selection -->
+            <div>
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5 mb-2.5">
+                    <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
+                    <span>Color Space Geometry</span>
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="switchColorSpace('RGB')" id="tabRGB" class="tab-btn active p-2.5 rounded-lg border border-white/10 text-xs font-medium flex flex-col items-center justify-center transition">
+                        <span class="font-bold text-sm">RGB</span>
+                        <span class="text-[10px] text-slate-400">3D Color Cube</span>
+                    </button>
+                    <button onclick="switchColorSpace('HSV')" id="tabHSV" class="tab-btn p-2.5 rounded-lg border border-white/10 text-xs font-medium flex flex-col items-center justify-center transition">
+                        <span class="font-bold text-sm">HSV</span>
+                        <span class="text-[10px] text-slate-400">Cylinder / Cone</span>
+                    </button>
+                    <button onclick="switchColorSpace('HSI')" id="tabHSI" class="tab-btn p-2.5 rounded-lg border border-white/10 text-xs font-medium flex flex-col items-center justify-center transition">
+                        <span class="font-bold text-sm">HSI</span>
+                        <span class="text-[10px] text-slate-400">Double Cone</span>
+                    </button>
+                    <button onclick="switchColorSpace('YCbCr')" id="tabYCbCr" class="tab-btn p-2.5 rounded-lg border border-white/10 text-xs font-medium flex flex-col items-center justify-center transition">
+                        <span class="font-bold text-sm">YCbCr</span>
+                        <span class="text-[10px] text-slate-400">Video Luma/Chroma</span>
+                    </button>
+                    <button onclick="switchColorSpace('CMYK')" id="tabCMYK" class="tab-btn col-span-2 p-2.5 rounded-lg border border-white/10 text-xs font-medium flex flex-row items-center justify-between px-4 transition">
+                        <div class="text-left">
+                            <div class="font-bold text-sm">CMYK</div>
+                            <div class="text-[10px] text-slate-400">Subtractive Primary Model</div>
+                        </div>
+                        <i data-lucide="printer" class="w-4 h-4 text-pink-400"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Render Mode Selector -->
+            <div>
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5 mb-2.5">
+                    <i data-lucide="eye" class="w-4 h-4 text-indigo-400"></i>
+                    <span>Rendering Mode</span>
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setRenderMode('points')" id="modePoints" class="px-3 py-2 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 text-xs font-medium flex items-center justify-center space-x-1.5 transition">
+                        <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+                        <span>Point Cloud</span>
+                    </button>
+                    <button onclick="setRenderMode('solid')" id="modeSolid" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs font-medium flex items-center justify-center space-x-1.5 transition">
+                        <i data-lucide="disc" class="w-3.5 h-3.5"></i>
+                        <span>Solid Surface</span>
+                    </button>
+                    <button onclick="setRenderMode('wireframe')" id="modeWireframe" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs font-medium flex items-center justify-center space-x-1.5 transition">
+                        <i data-lucide="box" class="w-3.5 h-3.5"></i>
+                        <span>Wireframe</span>
+                    </button>
+                    <button onclick="setRenderMode('slice')" id="modeSlice" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs font-medium flex items-center justify-center space-x-1.5 transition">
+                        <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
+                        <span>Slice Cutter</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Point Cloud Density & Size Controls -->
+            <div id="pointCloudControls" class="space-y-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div class="flex items-center justify-between text-xs font-medium">
+                    <span class="text-slate-300 flex items-center space-x-1">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+                        <span>Voxel Density</span>
+                    </span>
+                    <span id="densityVal" class="font-mono text-cyan-400">20×20×20</span>
+                </div>
+                <input type="range" id="densitySlider" min="8" max="32" step="2" value="20" oninput="updateDensity(this.value)" class="w-full">
+
+                <div class="flex items-center justify-between text-xs font-medium pt-1">
+                    <span class="text-slate-300 flex items-center space-x-1">
+                        <i data-lucide="circle-dot" class="w-3.5 h-3.5 text-purple-400"></i>
+                        <span>Particle Size</span>
+                    </span>
+                    <span id="particleSizeVal" class="font-mono text-purple-400">0.06</span>
+                </div>
+                <input type="range" id="particleSizeSlider" min="0.02" max="0.18" step="0.01" value="0.06" oninput="updateParticleSize(this.value)" class="w-full">
+            </div>
+
+            <!-- CMYK Key Component Slider (Conditional) -->
+            <div id="cmykKeyControl" class="hidden bg-pink-950/20 p-3 rounded-xl border border-pink-500/20 space-y-2">
+                <div class="flex items-center justify-between text-xs font-medium">
+                    <span class="text-pink-300 flex items-center space-x-1.5">
+                        <i data-lucide="sliders" class="w-3.5 h-3.5 text-pink-400"></i>
+                        <span>Key / Black (K) Component</span>
+                    </span>
+                    <span id="kVal" class="font-mono text-pink-400">0%</span>
+                </div>
+                <input type="range" id="kSlider" min="0" max="1" step="0.01" value="0" oninput="updateCmykK(this.value)" class="w-full accent-pink-500">
+                <p class="text-[10px] text-slate-400 leading-tight">Adjusting K modifies the subtractive ink density across the CMY 3D volume.</p>
+            </div>
+
+            <!-- Clipping / Slice Plane Cutters -->
+            <div id="slicePlanesControls" class="space-y-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span class="flex items-center space-x-1.5">
+                        <i data-lucide="scissors" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>3D Clipping Planes</span>
+                    </span>
+                    <button onclick="resetSlices()" class="text-[10px] text-emerald-400 hover:underline">Reset</button>
+                </label>
+                
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="w-12 font-mono text-red-400 font-bold">X Cut</span>
+                        <input type="range" id="sliceX" min="0" max="100" value="100" oninput="updateSlices()" class="flex-1">
+                        <span id="sliceXVal" class="w-8 text-right font-mono text-[10px] text-slate-400">100%</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="w-12 font-mono text-green-400 font-bold">Y Cut</span>
+                        <input type="range" id="sliceY" min="0" max="100" value="100" oninput="updateSlices()" class="flex-1">
+                        <span id="sliceYVal" class="w-8 text-right font-mono text-[10px] text-slate-400">100%</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="w-12 font-mono text-blue-400 font-bold">Z Cut</span>
+                        <input type="range" id="sliceZ" min="0" max="100" value="100" oninput="updateSlices()" class="flex-1">
+                        <span id="sliceZVal" class="w-8 text-right font-mono text-[10px] text-slate-400">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Color Input Sliders -->
+            <div class="space-y-3 pt-2">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+                        <i data-lucide="pipette" class="w-4 h-4 text-amber-400"></i>
+                        <span>Live Probe Picker</span>
+                    </label>
+                    <input type="color" id="nativePicker" value="#ff8040" oninput="onNativePickerChange(this.value)" class="w-7 h-7 rounded cursor-pointer border-0 bg-transparent">
+                </div>
+
+                <!-- RGB Individual Sliders -->
+                <div class="space-y-2.5 glass-card p-3 rounded-xl">
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1">
+                            <span class="text-red-400">Red (R)</span>
+                            <span id="rVal" class="font-mono text-slate-200">255</span>
+                        </div>
+                        <input type="range" id="rSlider" min="0" max="255" value="255" oninput="onRgbSliderChange()" class="w-full accent-red-500">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1">
+                            <span class="text-green-400">Green (G)</span>
+                            <span id="gVal" class="font-mono text-slate-200">128</span>
+                        </div>
+                        <input type="range" id="gSlider" min="0" max="255" value="128" oninput="onRgbSliderChange()" class="w-full accent-green-500">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1">
+                            <span class="text-blue-400">Blue (B)</span>
+                            <span id="bVal" class="font-mono text-slate-200">64</span>
+                        </div>
+                        <input type="range" id="bSlider" min="0" max="255" value="64" oninput="onRgbSliderChange()" class="w-full accent-blue-500">
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Center Viewport (3D Canvas) -->
+        <main class="flex-1 relative bg-gradient-to-b from-[#080b12] to-[#0f172a] overflow-hidden">
+            
+            <!-- Three.js Canvas Container -->
+            <div id="canvasContainer" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+            <!-- Canvas Floating HUD Overlay -->
+            <div class="absolute inset-0 canvas-hud p-4 flex flex-col justify-between">
+                
+                <!-- Top Canvas Info Bar -->
+                <div class="flex justify-between items-start">
+                    <div class="glass-panel px-3 py-2 rounded-xl text-xs flex items-center space-x-3 shadow-xl">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span id="activeSpaceLabel" class="font-bold text-white tracking-wide">RGB COLOR SPACE</span>
+                        </div>
+                        <span class="text-slate-500">|</span>
+                        <span id="activeShapeLabel" class="text-slate-300 font-mono text-[11px]">3D Color Cube (0-255)</span>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button onclick="toggleAxes()" id="btnToggleAxes" class="glass-panel p-2 rounded-lg text-xs font-medium hover:bg-white/10 text-slate-200 flex items-center space-x-1.5 transition" title="Toggle 3D Axes">
+                            <i data-lucide="navigation-2" class="w-4 h-4 text-cyan-400"></i>
+                            <span class="hidden sm:inline">Axes</span>
+                        </button>
+                        <button onclick="toggleProbe()" id="btnToggleProbe" class="glass-panel p-2 rounded-lg text-xs font-medium hover:bg-white/10 text-slate-200 flex items-center space-x-1.5 transition" title="Toggle Probe Sphere">
+                            <i data-lucide="crosshair" class="w-4 h-4 text-amber-400"></i>
+                            <span class="hidden sm:inline">Probe</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Bottom Axis Helper Legend -->
+                <div class="flex justify-between items-end">
+                    <div class="glass-panel p-3 rounded-xl text-xs space-y-1.5 shadow-xl max-w-xs">
+                        <div class="font-semibold text-slate-300 text-[11px] uppercase tracking-wider mb-1 flex items-center justify-between">
+                            <span>Axis Orientation</span>
+                            <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+                        </div>
+                        <div id="axisLegendX" class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500 shrink-0"></span>
+                            <span class="font-mono text-[11px] text-slate-300">X: Red (R) Axis</span>
+                        </div>
+                        <div id="axisLegendY" class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-green-500 shrink-0"></span>
+                            <span class="font-mono text-[11px] text-slate-300">Y: Green (G) Axis</span>
+                        </div>
+                        <div id="axisLegendZ" class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span>
+                            <span class="font-mono text-[11px] text-slate-300">Z: Blue (B) Axis</span>
+                        </div>
+                    </div>
+
+                    <!-- 3D Navigation Hint -->
+                    <div class="hidden lg:flex glass-panel px-3 py-1.5 rounded-lg text-[11px] text-slate-400 items-center space-x-2">
+                        <i data-lucide="mouse-pointer" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>Rotate: Left Drag | Pan: Right Drag | Zoom: Scroll | Click 3D space to sample</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast Notification Box -->
+            <div id="toast" class="absolute bottom-6 left-1/2 -translate-x-1/2 glass-panel border border-emerald-500/40 bg-emerald-950/80 text-emerald-200 px-4 py-2 rounded-xl text-xs font-medium flex items-center space-x-2 shadow-2xl transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50">
+                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                <span id="toastMsg">Copied to clipboard!</span>
+            </div>
+        </main>
+
+        <!-- Right Panel: Color Analytics, Real-time Conversions & Theory -->
+        <aside class="w-80 lg:w-96 glass-panel border-l border-white/10 flex flex-col z-20 shrink-0 overflow-y-auto p-4 space-y-5">
+            
+            <!-- Live Selected Color Card -->
+            <div class="glass-card p-4 rounded-2xl border border-white/10 relative overflow-hidden">
+                <div class="flex items-center space-x-4">
+                    <!-- Large Swatch Box -->
+                    <div id="colorSwatch" class="w-16 h-16 rounded-xl border-2 border-white/20 shadow-2xl shrink-0 transition-colors duration-200" style="background-color: #ff8040;"></div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Active Color Probe</div>
+                        <div id="hexBadge" onclick="copyText(this.innerText)" class="text-xl font-bold font-mono text-white hover:text-blue-400 cursor-pointer transition flex items-center space-x-1.5" title="Click to copy HEX">
+                            <span>#FF8040</span>
+                            <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500"></i>
+                        </div>
+                        <div id="rgbCssLabel" class="text-xs font-mono text-slate-300 truncate mt-0.5">rgb(255, 128, 64)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Multi-Space Conversions Grid -->
+            <div>
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5 mb-2.5">
+                    <i data-lucide="calculator" class="w-4 h-4 text-pink-400"></i>
+                    <span>Real-Time Color Conversions</span>
+                </label>
+
+                <div class="space-y-2 font-mono text-xs">
+                    <!-- RGB Card -->
+                    <div onclick="copyText(document.getElementById('convRgb').innerText)" class="glass-card p-2.5 rounded-xl flex items-center justify-between cursor-pointer group">
+                        <span class="text-red-400 font-bold w-14">RGB</span>
+                        <span id="convRgb" class="text-slate-200 group-hover:text-blue-300">255, 128, 64 (1.0, 0.50, 0.25)</span>
+                        <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition"></i>
+                    </div>
+
+                    <!-- HSV Card -->
+                    <div onclick="copyText(document.getElementById('convHsv').innerText)" class="glass-card p-2.5 rounded-xl flex items-center justify-between cursor-pointer group">
+                        <span class="text-amber-400 font-bold w-14">HSV</span>
+                        <span id="convHsv" class="text-slate-200 group-hover:text-blue-300">20°, 75%, 100%</span>
+                        <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition"></i>
+                    </div>
+
+                    <!-- HSI Card -->
+                    <div onclick="copyText(document.getElementById('convHsi').innerText)" class="glass-card p-2.5 rounded-xl flex items-center justify-between cursor-pointer group">
+                        <span class="text-purple-400 font-bold w-14">HSI</span>
+                        <span id="convHsi" class="text-slate-200 group-hover:text-blue-300">20°, 67%, 58%</span>
+                        <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition"></i>
+                    </div>
+
+                    <!-- YCbCr Card -->
+                    <div onclick="copyText(document.getElementById('convYcbcr').innerText)" class="glass-card p-2.5 rounded-xl flex items-center justify-between cursor-pointer group">
+                        <span class="text-emerald-400 font-bold w-14">YCbCr</span>
+                        <span id="convYcbcr" class="text-slate-200 group-hover:text-blue-300">Y:147 Cb:81 Cr:204</span>
+                        <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition"></i>
+                    </div>
+
+                    <!-- CMYK Card -->
+                    <div onclick="copyText(document.getElementById('convCmyk').innerText)" class="glass-card p-2.5 rounded-xl flex items-center justify-between cursor-pointer group">
+                        <span class="text-cyan-400 font-bold w-14">CMYK</span>
+                        <span id="convCmyk" class="text-slate-200 group-hover:text-blue-300">C:0% M:50% Y:75% K:0%</span>
+                        <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Educational & Theoretical Knowledge Panel -->
+            <div class="space-y-3 pt-2">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+                    <i data-lucide="book-open" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Color Science & Math</span>
+                </label>
+
+                <div class="glass-card p-3.5 rounded-xl space-y-3 text-xs leading-relaxed">
+                    <div id="theoryTitle" class="font-bold text-slate-100 text-sm border-b border-white/10 pb-1.5 text-blue-400">
+                        RGB Color Model
+                    </div>
+                    
+                    <div id="theoryDescription" class="text-slate-300">
+                        The RGB color model is an additive color space based on the Cartesian coordinate system. Red, Green, and Blue light beams are combined together in various proportions to produce a broad array of colors.
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="font-semibold text-slate-200 block text-[11px] uppercase tracking-wider">Geometric Axis Mapping:</span>
+                        <ul id="theoryAxesList" class="list-disc list-inside text-slate-400 space-y-0.5 text-[11px] font-mono">
+                            <li>X Axis: Red Component (0 to 255)</li>
+                            <li>Y Axis: Green Component (0 to 255)</li>
+                            <li>Z Axis: Blue Component (0 to 255)</li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="font-semibold text-slate-200 block text-[11px] uppercase tracking-wider">Key Mathematical Equations:</span>
+                        <div id="theoryMath" class="bg-black/40 p-2.5 rounded-lg font-mono text-[10px] text-cyan-300 leading-normal border border-white/5 overflow-x-auto">
+                            C = (R, G, B) ∈ [0, 1]³<br>
+                            Grayscale Line: R = G = B (Main Diagonal)
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="font-semibold text-slate-200 block text-[11px] uppercase tracking-wider">Primary Applications:</span>
+                        <div id="theoryApps" class="text-slate-400 text-[11px]">
+                            Digital monitors, OLED displays, camera sensors, Web graphics, GPU framebuffers.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <script>
+        /* ========================================================================
+         * COLOR SCIENCE MATHEMATICAL CONVERSIONS
+         * ======================================================================== */
+        
+        // RGB in [0, 255] -> Hex
+        function rgbToHex(r, g, b) {
+            const toHex = c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+        }
+
+        // Hex -> RGB [0, 255]
+        function hexToRgb(hex) {
+            hex = hex.replace(/^#/, '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            const num = parseInt(hex, 16);
+            return {
+                r: (num >> 16) & 255,
+                g: (num >> 8) & 255,
+                b: num & 255
+            };
+        }
+
+        // RGB [0, 1] -> HSV (H in 0-360, S in 0-1, V in 0-1)
+        function rgbToHsv(r, g, b) {
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let d = max - min;
+            let h = 0;
+            let s = max === 0 ? 0 : d / max;
+            let v = max;
+
+            if (max !== min) {
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: Math.round(h * 360), s, v };
+        }
+
+        // HSV -> RGB [0, 1]
+        function hsvToRgb(h, s, v) {
+            let r, g, b;
+            let i = Math.floor(h / 60) % 6;
+            let f = h / 60 - Math.floor(h / 60);
+            let p = v * (1 - s);
+            let q = v * (1 - f * s);
+            let t = v * (1 - (1 - f) * s);
+
+            switch (i) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return { r, g, b };
+        }
+
+        // RGB [0, 1] -> HSI (H in 0-360, S in 0-1, I in 0-1)
+        function rgbToHsi(r, g, b) {
+            let i = (r + g + b) / 3;
+            if (i === 0) return { h: 0, s: 0, i: 0 };
+            let min = Math.min(r, g, b);
+            let s = 1 - (min / i);
+
+            let num = 0.5 * ((r - g) + (r - b));
+            let den = Math.sqrt((r - g) * (r - g) + (r - b) * (g - b));
+            let h = 0;
+
+            if (den !== 0) {
+                let theta = Math.acos(Math.min(Math.max(num / den, -1), 1)) * (180 / Math.PI);
+                h = (b <= g) ? theta : 360 - theta;
+            }
+
+            return { h: Math.round(h), s, i };
+        }
+
+        // HSI -> RGB [0, 1]
+        function hsiToRgb(h, s, i) {
+            let r, g, b;
+            h = (h % 360 + 360) % 360;
+            let rad = (h * Math.PI) / 180;
+
+            if (h >= 0 && h < 120) {
+                b = i * (1 - s);
+                r = i * (1 + (s * Math.cos(rad)) / Math.cos((60 * Math.PI / 180) - rad));
+                g = 3 * i - (r + b);
+            } else if (h >= 120 && h < 240) {
+                let h2 = h - 120;
+                let rad2 = (h2 * Math.PI) / 180;
+                r = i * (1 - s);
+                g = i * (1 + (s * Math.cos(rad2)) / Math.cos((60 * Math.PI / 180) - rad2));
+                b = 3 * i - (r + g);
+            } else {
+                let h3 = h - 240;
+                let rad3 = (h3 * Math.PI) / 180;
+                g = i * (1 - s);
+                b = i * (1 + (s * Math.cos(rad3)) / Math.cos((60 * Math.PI / 180) - rad3));
+                r = 3 * i - (g + b);
+            }
+
+            return {
+                r: Math.min(Math.max(r || 0, 0), 1),
+                g: Math.min(Math.max(g || 0, 0), 1),
+                b: Math.min(Math.max(b || 0, 0), 1)
+            };
+        }
+
+        // RGB [0, 1] -> YCbCr (ITU-R BT.601)
+        function rgbToYcbcr(r, g, b) {
+            let y = 0.299 * r + 0.587 * g + 0.114 * b;
+            let cb = -0.168736 * r - 0.331264 * g + 0.5 * b + 0.5;
+            let cr = 0.5 * r - 0.418688 * g - 0.081312 * b + 0.5;
+            return { y, cb, cr };
+        }
+
+        // YCbCr -> RGB [0, 1]
+        function ycbcrToRgb(y, cb, cr) {
+            let cb_shift = cb - 0.5;
+            let cr_shift = cr - 0.5;
+            let r = y + 1.402 * cr_shift;
+            let g = y - 0.344136 * cb_shift - 0.714136 * cr_shift;
+            let b = y + 1.772 * cb_shift;
+            return {
+                r: Math.min(Math.max(r, 0), 1),
+                g: Math.min(Math.max(g, 0), 1),
+                b: Math.min(Math.max(b, 0), 1)
+            };
+        }
+
+        // RGB [0, 1] -> CMYK
+        function rgbToCmyk(r, g, b) {
+            let k = 1 - Math.max(r, g, b);
+            if (k >= 0.9999) {
+                return { c: 0, m: 0, y: 0, k: 1 };
+            }
+            let c = (1 - r - k) / (1 - k);
+            let m = (1 - g - k) / (1 - k);
+            let y = (1 - b - k) / (1 - k);
+            return { c, m, y, k };
+        }
+
+        // CMYK -> RGB [0, 1]
+        function cmykToRgb(c, m, y, k) {
+            let r = (1 - c) * (1 - k);
+            let g = (1 - m) * (1 - k);
+            let b = (1 - y) * (1 - k);
+            return { r, g, b };
+        }
+
+        /* ========================================================================
+         * GLOBAL APP STATE & THREE.JS INITIALIZATION
+         * ======================================================================== */
+        
+        let currentRgb = { r: 255, g: 128, b: 64 };
+        let currentSpace = 'RGB'; // 'RGB', 'HSV', 'HSI', 'YCbCr', 'CMYK'
+        let currentRenderMode = 'points'; // 'points', 'solid', 'wireframe', 'slice'
+        let voxelDensity = 20;
+        let particleSize = 0.06;
+        let cmykKVal = 0.0;
+        
+        let slices = { x: 100, y: 100, z: 100 };
+        let showAxes = true;
+        let showProbe = true;
+        let isAutoRotating = false;
+
+        // Three.js Core Variables
+        let scene, camera, renderer, controls;
+        let spaceGroup; // Container for active color space 3D objects
+        let probeGroup, probeMesh, probeLight;
+        let axesGroup;
+        let clippingPlanes = [];
+        let raycaster, mouse;
+
+        const SPACE_SCALE = 4.0; // Normalized bounding box size
+
+        // Educational metadata database
+        const THEORY_DATA = {
+            RGB: {
+                title: "RGB Color Model (Additive)",
+                desc: "Cartesian additive color space where Red, Green, and Blue light combine to form colors. White is full intensity of all three primaries, while Black is complete absence of light.",
+                axes: [
+                    "X Axis: Red primary intensity (0 to 255)",
+                    "Y Axis: Green primary intensity (0 to 255)",
+                    "Z Axis: Blue primary intensity (0 to 255)"
+                ],
+                math: "Color C = (R, G, B) ∈ [0, 1]³\nGrayscale axis: R = G = B diagonal",
+                apps: "Digital Displays (LCD/OLED), Cameras, Computer Graphics, GPU Render Buffers."
+            },
+            HSV: {
+                title: "HSV Color Space (Hexcone/Cylinder)",
+                desc: "Perceptual model reformulating RGB into cylindrical coordinates. Separates chromatic content (Hue and Saturation) from brightness (Value / Brightness).",
+                axes: [
+                    "Angle θ: Hue spectrum (0° Red, 120° Green, 240° Blue)",
+                    "Radius r: Saturation purity (0 = Gray, 1 = Pure color)",
+                    "Height Y: Value / Brightness (0 = Black, 1 = Full Brightness)"
+                ],
+                math: "V = max(R,G,B)\nS = (V - min(R,G,B)) / V\nH = Angle of primary dominance",
+                apps: "Color Pickers, Image Segmentation, Photoshop/GIMP adjustments, Object Tracking."
+            },
+            HSI: {
+                title: "HSI Color Space (Double Cone)",
+                desc: "Bi-conical perceptual color space decoupling Intensity (total luminance) from chromaticity. Designed to closely match human eye brightness perception.",
+                axes: [
+                    "Angle θ: Hue angle (0° to 360°)",
+                    "Radius r: Saturation (bounded by top/bottom cones)",
+                    "Vertical Y: Intensity I = (R + G + B) / 3 (Black to White)"
+                ],
+                math: "I = (R + G + B) / 3\nS = 1 - min(R,G,B) / I\nDouble Cone apexes at Black (I=0) & White (I=1)",
+                apps: "Computer Vision algorithms, Medical Image Analysis, Contrast Enhancement."
+            },
+            YCbCr: {
+                title: "YCbCr Color Space (Luminance / Chrominance)",
+                desc: "Digital video color encoding family. Y represents luma (brightness), while Cb (Blue-difference) and Cr (Red-difference) encode color information, enabling chroma subsampling.",
+                axes: [
+                    "Y Axis: Luminance / Brightness (0 to 255)",
+                    "Cb Axis: Blue Chrominance difference (Cb - 0.5)",
+                    "Cr Axis: Red Chrominance difference (Cr - 0.5)"
+                ],
+                math: "Y  =  0.299R + 0.587G + 0.114B\nCb = -0.1687R - 0.3312G + 0.5000B + 128\nCr =  0.5000R - 0.4186G - 0.0813B + 128",
+                apps: "JPEG Compression, MPEG/H.264/H.265 Video, Satellite Remote Sensing, TV Broadcast."
+            },
+            CMYK: {
+                title: "CMYK Color Model (Subtractive Printing)",
+                desc: "Subtractive color model used in color printing. Inks absorb light: Cyan absorbs Red, Magenta absorbs Green, and Yellow absorbs Blue. Black ink (K) adds contrast and saves colored ink.",
+                axes: [
+                    "X Axis: Cyan ink saturation (0% to 100%)",
+                    "Y Axis: Yellow ink saturation (0% to 100%)",
+                    "Z Axis: Magenta ink saturation (0% to 100%)",
+                    "K Slider: Key / Black ink density overlay"
+                ],
+                math: "K = 1 - max(R,G,B)\nC = (1 - R - K) / (1 - K)\nM = (1 - G - K) / (1 - K)\nY = (1 - B - K) / (1 - K)",
+                apps: "Commercial Offset Printing, Desktop Inkjet Printers, Graphic Design Prepress."
+            }
+        };
+
+        // Initialize Three.js viewport
+        window.addEventListener('load', () => {
+            initThreeJS();
+            initClippingPlanes();
+            buildCurrentSpaceGeometry();
+            buildAxes();
+            buildProbeMarker();
+            updateAllVisuals();
+            lucide.createIcons();
+
+            // Window resize handler
+            window.addEventListener('resize', onWindowResize);
+        });
+
+        function initThreeJS() {
+            const container = document.getElementById('canvasContainer');
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x080b12, 0.03);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(6, 4.5, 7.5);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.localClippingEnabled = true;
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 20;
+            controls.minDistance = 2;
+            controls.target.set(0, 0, 0);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight1.position.set(10, 15, 10);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0x3b82f6, 0.4);
+            dirLight2.position.set(-10, -10, -10);
+            scene.add(dirLight2);
+
+            // Container group for active color model geometry
+            spaceGroup = new THREE.Group();
+            scene.add(spaceGroup);
+
+            // Raycaster for canvas clicking
+            raycaster = new THREE.Raycaster();
+            raycaster.params.Points.threshold = 0.15;
+            mouse = new THREE.Vector2();
+
+            renderer.domElement.addEventListener('pointerdown', onCanvasClick);
+
+            // Start Animation Loop
+            animate();
+        }
+
+        function initClippingPlanes() {
+            // Three clipping planes facing along X, Y, Z axes
+            clippingPlanes = [
+                new THREE.Plane(new THREE.Vector3(-1, 0, 0), SPACE_SCALE / 2),
+                new THREE.Plane(new THREE.Vector3(0, -1, 0), SPACE_SCALE / 2),
+                new THREE.Plane(new THREE.Vector3(0, 0, -1), SPACE_SCALE / 2)
+            ];
+        }
+
+        /* ========================================================================
+         * 3D GEOMETRY GENERATORS
+         * ======================================================================== */
+        
+        function clearSpaceGroup() {
+            while (spaceGroup.children.length > 0) {
+                const obj = spaceGroup.children[0];
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                    else obj.material.dispose();
+                }
+                spaceGroup.remove(obj);
+            }
+        }
+
+        function buildCurrentSpaceGeometry() {
+            clearSpaceGroup();
+
+            if (currentRenderMode === 'points') {
+                buildPointCloud();
+            } else if (currentRenderMode === 'solid') {
+                buildSolidSurface();
+            } else if (currentRenderMode === 'wireframe') {
+                buildWireframe();
+            } else if (currentRenderMode === 'slice') {
+                buildPointCloud(); // Slice cutter uses point cloud or clipped solid
+            }
+        }
+
+        // Generate Voxel Point Cloud
+        function buildPointCloud() {
+            const positions = [];
+            const colors = [];
+            const N = parseInt(voxelDensity);
+
+            if (currentSpace === 'RGB') {
+                for (let x = 0; x < N; x++) {
+                    for (let y = 0; y < N; y++) {
+                        for (let z = 0; z < N; z++) {
+                            let r = x / (N - 1);
+                            let g = y / (N - 1);
+                            let b = z / (N - 1);
+                            
+                            // Center position around origin
+                            positions.push((r - 0.5) * SPACE_SCALE, (g - 0.5) * SPACE_SCALE, (b - 0.5) * SPACE_SCALE);
+                            colors.push(r, g, b);
+                        }
+                    }
+                }
+            } 
+            else if (currentSpace === 'HSV') {
+                const nH = N * 2, nS = Math.floor(N / 2), nV = N;
+                for (let vi = 0; vi < nV; vi++) {
+                    let v = vi / (nV - 1);
+                    for (let si = 0; si < nS; si++) {
+                        let s = si / (nS - 1);
+                        let radius = s * (SPACE_SCALE / 2);
+                        for (let hi = 0; hi < nH; hi++) {
+                            let hAngle = (hi / nH) * Math.PI * 2;
+                            let hDeg = (hi / nH) * 360;
+
+                            let posX = radius * Math.cos(hAngle);
+                            let posZ = radius * Math.sin(hAngle);
+                            let posY = (v - 0.5) * SPACE_SCALE;
+
+                            let rgb = hsvToRgb(hDeg, s, v);
+                            positions.push(posX, posY, posZ);
+                            colors.push(rgb.r, rgb.g, rgb.b);
+                        }
+                    }
+                }
+            } 
+            else if (currentSpace === 'HSI') {
+                const nH = N * 2, nS = Math.floor(N / 2), nI = N;
+                for (let ii = 0; ii < nI; ii++) {
+                    let intensity = ii / (nI - 1);
+                    // Double cone max radius at given intensity
+                    let maxR = 2 * Math.min(intensity, 1 - intensity) * (SPACE_SCALE / 2);
+                    
+                    for (let si = 0; si < nS; si++) {
+                        let s = si / (nS - 1);
+                        let radius = s * maxR;
+
+                        for (let hi = 0; hi < nH; hi++) {
+                            let hAngle = (hi / nH) * Math.PI * 2;
+                            let hDeg = (hi / nH) * 360;
+
+                            let posX = radius * Math.cos(hAngle);
+                            let posZ = radius * Math.sin(hAngle);
+                            let posY = (intensity - 0.5) * SPACE_SCALE;
+
+                            let rgb = hsiToRgb(hDeg, s, intensity);
+                            positions.push(posX, posY, posZ);
+                            colors.push(rgb.r, rgb.g, rgb.b);
+                        }
+                    }
+                }
+            } 
+            else if (currentSpace === 'YCbCr') {
+                for (let x = 0; x < N; x++) {
+                    for (let y = 0; y < N; y++) {
+                        for (let z = 0; z < N; z++) {
+                            let r = x / (N - 1);
+                            let g = y / (N - 1);
+                            let b = z / (N - 1);
+
+                            let ycbcr = rgbToYcbcr(r, g, b);
+
+                            let posX = (ycbcr.cb - 0.5) * SPACE_SCALE;
+                            let posY = (ycbcr.y - 0.5) * SPACE_SCALE;
+                            let posZ = (ycbcr.cr - 0.5) * SPACE_SCALE;
+
+                            positions.push(posX, posY, posZ);
+                            colors.push(r, g, b);
+                        }
+                    }
+                }
+            } 
+            else if (currentSpace === 'CMYK') {
+                let k = cmykKVal;
+                for (let x = 0; x < N; x++) {
+                    for (let y = 0; y < N; y++) {
+                        for (let z = 0; z < N; z++) {
+                            let c = x / (N - 1);
+                            let m = z / (N - 1);
+                            let yComp = y / (N - 1);
+
+                            let rgb = cmykToRgb(c, m, yComp, k);
+
+                            let posX = (c - 0.5) * SPACE_SCALE;
+                            let posY = (yComp - 0.5) * SPACE_SCALE;
+                            let posZ = (m - 0.5) * SPACE_SCALE;
+
+                            positions.push(posX, posY, posZ);
+                            colors.push(rgb.r, rgb.g, rgb.b);
+                        }
+                    }
+                }
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: parseFloat(particleSize),
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.88,
+                sizeAttenuation: true,
+                clippingPlanes: clippingPlanes,
+                clipShadows: true
+            });
+
+            const pointsMesh = new THREE.Points(geometry, material);
+            spaceGroup.add(pointsMesh);
+        }
+
+        // Build Solid Surface Meshes
+        function buildSolidSurface() {
+            if (currentSpace === 'RGB') {
+                const geom = new THREE.BoxGeometry(SPACE_SCALE, SPACE_SCALE, SPACE_SCALE, 16, 16, 16);
+                applyRgbColorsToGeometry(geom);
+                const mat = createSolidMaterial();
+                spaceGroup.add(new THREE.Mesh(geom, mat));
+            } 
+            else if (currentSpace === 'HSV') {
+                // Cylinder for HSV
+                const geom = new THREE.CylinderGeometry(SPACE_SCALE / 2, SPACE_SCALE / 2, SPACE_SCALE, 36, 16);
+                const pos = geom.attributes.position;
+                const colors = [];
+
+                for (let i = 0; i < pos.count; i++) {
+                    let x = pos.getX(i);
+                    let y = pos.getY(i);
+                    let z = pos.getZ(i);
+
+                    let radius = Math.sqrt(x * x + z * z);
+                    let s = Math.min(radius / (SPACE_SCALE / 2), 1.0);
+                    let v = (y / SPACE_SCALE) + 0.5;
+                    let angle = Math.atan2(z, x);
+                    let hDeg = (angle < 0 ? angle + Math.PI * 2 : angle) * (180 / Math.PI);
+
+                    let rgb = hsvToRgb(hDeg, s, v);
+                    colors.push(rgb.r, rgb.g, rgb.b);
+                }
+                geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                const mat = createSolidMaterial();
+                spaceGroup.add(new THREE.Mesh(geom, mat));
+            } 
+            else if (currentSpace === 'HSI') {
+                // Double Cone Geometry for HSI
+                const geomTop = new THREE.ConeGeometry(SPACE_SCALE / 2, SPACE_SCALE / 2, 36, 16);
+                geomTop.translate(0, SPACE_SCALE / 4, 0);
+
+                const geomBottom = new THREE.ConeGeometry(SPACE_SCALE / 2, SPACE_SCALE / 2, 36, 16);
+                geomBottom.rotateX(Math.PI);
+                geomBottom.translate(0, -SPACE_SCALE / 4, 0);
+
+                const colorizeHsiCone = (geom) => {
+                    const pos = geom.attributes.position;
+                    const colors = [];
+                    for (let i = 0; i < pos.count; i++) {
+                        let x = pos.getX(i);
+                        let y = pos.getY(i);
+                        let z = pos.getZ(i);
+
+                        let intensity = (y / SPACE_SCALE) + 0.5;
+                        let maxR = 2 * Math.min(intensity, 1 - intensity) * (SPACE_SCALE / 2);
+                        let r = Math.sqrt(x * x + z * z);
+                        let s = maxR > 0.001 ? Math.min(r / maxR, 1.0) : 0;
+                        let angle = Math.atan2(z, x);
+                        let hDeg = (angle < 0 ? angle + Math.PI * 2 : angle) * (180 / Math.PI);
+
+                        let rgb = hsiToRgb(hDeg, s, intensity);
+                        colors.push(rgb.r, rgb.g, rgb.b);
+                    }
+                    geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                };
+
+                colorizeHsiCone(geomTop);
+                colorizeHsiCone(geomBottom);
+
+                const mat = createSolidMaterial();
+                spaceGroup.add(new THREE.Mesh(geomTop, mat));
+                spaceGroup.add(new THREE.Mesh(geomBottom, mat));
+            } 
+            else if (currentSpace === 'YCbCr') {
+                // Deformed RGB Cube in YCbCr coordinates
+                const geom = new THREE.BoxGeometry(SPACE_SCALE, SPACE_SCALE, SPACE_SCALE, 16, 16, 16);
+                const pos = geom.attributes.position;
+                const colors = [];
+
+                for (let i = 0; i < pos.count; i++) {
+                    let r = (pos.getX(i) / SPACE_SCALE) + 0.5;
+                    let g = (pos.getY(i) / SPACE_SCALE) + 0.5;
+                    let b = (pos.getZ(i) / SPACE_SCALE) + 0.5;
+
+                    let ycbcr = rgbToYcbcr(r, g, b);
+
+                    // Transform vertex position to YCbCr coordinates
+                    pos.setXYZ(
+                        i,
+                        (ycbcr.cb - 0.5) * SPACE_SCALE,
+                        (ycbcr.y - 0.5) * SPACE_SCALE,
+                        (ycbcr.cr - 0.5) * SPACE_SCALE
+                    );
+
+                    colors.push(r, g, b);
+                }
+                geom.computeVertexNormals();
+                geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                const mat = createSolidMaterial();
+                spaceGroup.add(new THREE.Mesh(geom, mat));
+            } 
+            else if (currentSpace === 'CMYK') {
+                const geom = new THREE.BoxGeometry(SPACE_SCALE, SPACE_SCALE, SPACE_SCALE, 16, 16, 16);
+                const pos = geom.attributes.position;
+                const colors = [];
+
+                for (let i = 0; i < pos.count; i++) {
+                    let c = (pos.getX(i) / SPACE_SCALE) + 0.5;
+                    let yComp = (pos.getY(i) / SPACE_SCALE) + 0.5;
+                    let m = (pos.getZ(i) / SPACE_SCALE) + 0.5;
+
+                    let rgb = cmykToRgb(c, m, yComp, cmykKVal);
+                    colors.push(rgb.r, rgb.g, rgb.b);
+                }
+                geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                const mat = createSolidMaterial();
+                spaceGroup.add(new THREE.Mesh(geom, mat));
+            }
+        }
+
+        // Apply RGB vertex colors to standard BoxGeometry
+        function applyRgbColorsToGeometry(geom) {
+            const pos = geom.attributes.position;
+            const colors = [];
+            for (let i = 0; i < pos.count; i++) {
+                let r = (pos.getX(i) / SPACE_SCALE) + 0.5;
+                let g = (pos.getY(i) / SPACE_SCALE) + 0.5;
+                let b = (pos.getZ(i) / SPACE_SCALE) + 0.5;
+                colors.push(r, g, b);
+            }
+            geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        }
+
+        function createSolidMaterial() {
+            return new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                roughness: 0.3,
+                metalness: 0.1,
+                clippingPlanes: clippingPlanes,
+                clipShadows: true
+            });
+        }
+
+        // Build Wireframe Outlines
+        function buildWireframe() {
+            let geom;
+            if (currentSpace === 'HSV') {
+                geom = new THREE.CylinderGeometry(SPACE_SCALE / 2, SPACE_SCALE / 2, SPACE_SCALE, 24, 8);
+            } else if (currentSpace === 'HSI') {
+                const geomTop = new THREE.ConeGeometry(SPACE_SCALE / 2, SPACE_SCALE / 2, 24, 8);
+                geomTop.translate(0, SPACE_SCALE / 4, 0);
+                const wfTop = new THREE.WireframeGeometry(geomTop);
+                const lineTop = new THREE.LineSegments(wfTop, new THREE.LineBasicMaterial({ color: 0x3b82f6 }));
+                
+                const geomBottom = new THREE.ConeGeometry(SPACE_SCALE / 2, SPACE_SCALE / 2, 24, 8);
+                geomBottom.rotateX(Math.PI);
+                geomBottom.translate(0, -SPACE_SCALE / 4, 0);
+                const wfBottom = new THREE.WireframeGeometry(geomBottom);
+                const lineBottom = new THREE.LineSegments(wfBottom, new THREE.LineBasicMaterial({ color: 0x3b82f6 }));
+
+                spaceGroup.add(lineTop);
+                spaceGroup.add(lineBottom);
+                return;
+            } else {
+                geom = new THREE.BoxGeometry(SPACE_SCALE, SPACE_SCALE, SPACE_SCALE);
+            }
+
+            const wireframeGeom = new THREE.WireframeGeometry(geom);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x60a5fa, linewidth: 1.5 });
+            const lineSegments = new THREE.LineSegments(wireframeGeom, lineMat);
+            spaceGroup.add(lineSegments);
+        }
+
+        /* ========================================================================
+         * 3D AXES & INTERACTIVE PROBE MARKER
+         * ======================================================================== */
+        
+        function buildAxes() {
+            if (axesGroup) scene.remove(axesGroup);
+            axesGroup = new THREE.Group();
+
+            const origin = new THREE.Vector3(-SPACE_SCALE / 2, -SPACE_SCALE / 2, -SPACE_SCALE / 2);
+            const axisLength = SPACE_SCALE + 0.6;
+
+            // X Axis (Red)
+            const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), origin, axisLength, 0xef4444, 0.25, 0.15);
+            axesGroup.add(arrowX);
+
+            // Y Axis (Green)
+            const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), origin, axisLength, 0x10b981, 0.25, 0.15);
+            axesGroup.add(arrowY);
+
+            // Z Axis (Blue)
+            const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), origin, axisLength, 0x3b82f6, 0.25, 0.15);
+            axesGroup.add(arrowZ);
+
+            scene.add(axesGroup);
+        }
+
+        function buildProbeMarker() {
+            probeGroup = new THREE.Group();
+
+            // Glowing Sphere Cursor
+            const sphereGeom = new THREE.SphereGeometry(0.18, 32, 32);
+            const sphereMat = new THREE.MeshStandardMaterial({
+                color: 0xff8040,
+                emissive: 0xff8040,
+                emissiveIntensity: 0.6,
+                roughness: 0.2,
+                metalness: 0.8
+            });
+            probeMesh = new THREE.Mesh(sphereGeom, sphereMat);
+            probeGroup.add(probeMesh);
+
+            // Outer Wireframe Ring
+            const ringGeom = new THREE.RingGeometry(0.25, 0.28, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            probeGroup.add(ringMesh);
+
+            // Light source emitting from probe
+            probeLight = new THREE.PointLight(0xff8040, 2, 4);
+            probeGroup.add(probeLight);
+
+            scene.add(probeGroup);
+        }
+
+        // Update 3D Marker Position according to selected RGB and active Color Space geometry
+        function updateProbePosition() {
+            if (!probeGroup) return;
+
+            let r = currentRgb.r / 255;
+            let g = currentRgb.g / 255;
+            let b = currentRgb.b / 255;
+
+            let px = 0, py = 0, pz = 0;
+
+            if (currentSpace === 'RGB') {
+                px = (r - 0.5) * SPACE_SCALE;
+                py = (g - 0.5) * SPACE_SCALE;
+                pz = (b - 0.5) * SPACE_SCALE;
+            } 
+            else if (currentSpace === 'HSV') {
+                let hsv = rgbToHsv(r, g, b);
+                let radius = hsv.s * (SPACE_SCALE / 2);
+                let hAngle = (hsv.h / 360) * Math.PI * 2;
+
+                px = radius * Math.cos(hAngle);
+                pz = radius * Math.sin(hAngle);
+                py = (hsv.v - 0.5) * SPACE_SCALE;
+            } 
+            else if (currentSpace === 'HSI') {
+                let hsi = rgbToHsi(r, g, b);
+                let maxR = 2 * Math.min(hsi.i, 1 - hsi.i) * (SPACE_SCALE / 2);
+                let radius = hsi.s * maxR;
+                let hAngle = (hsi.h / 360) * Math.PI * 2;
+
+                px = radius * Math.cos(hAngle);
+                pz = radius * Math.sin(hAngle);
+                py = (hsi.i - 0.5) * SPACE_SCALE;
+            } 
+            else if (currentSpace === 'YCbCr') {
+                let ycbcr = rgbToYcbcr(r, g, b);
+                px = (ycbcr.cb - 0.5) * SPACE_SCALE;
+                py = (ycbcr.y - 0.5) * SPACE_SCALE;
+                pz = (ycbcr.cr - 0.5) * SPACE_SCALE;
+            } 
+            else if (currentSpace === 'CMYK') {
+                let cmyk = rgbToCmyk(r, g, b);
+                px = (cmyk.c - 0.5) * SPACE_SCALE;
+                py = (cmyk.y - 0.5) * SPACE_SCALE;
+                pz = (cmyk.m - 0.5) * SPACE_SCALE;
+            }
+
+            probeGroup.position.set(px, py, pz);
+
+            // Update probe glowing light color
+            const hexColor = (currentRgb.r << 16) | (currentRgb.g << 8) | currentRgb.b;
+            probeMesh.material.color.setHex(hexColor);
+            probeMesh.material.emissive.setHex(hexColor);
+            probeLight.color.setHex(hexColor);
+        }
+
+        /* ========================================================================
+         * EVENT HANDLERS & UI BINDINGS
+         * ======================================================================== */
+        
+        function onRgbSliderChange() {
+            currentRgb.r = parseInt(document.getElementById('rSlider').value);
+            currentRgb.g = parseInt(document.getElementById('gSlider').value);
+            currentRgb.b = parseInt(document.getElementById('bSlider').value);
+
+            document.getElementById('rVal').innerText = currentRgb.r;
+            document.getElementById('gVal').innerText = currentRgb.g;
+            document.getElementById('bVal').innerText = currentRgb.b;
+
+            document.getElementById('nativePicker').value = rgbToHex(currentRgb.r, currentRgb.g, currentRgb.b);
+
+            updateAllVisuals();
+        }
+
+        function onNativePickerChange(hexVal) {
+            const rgb = hexToRgb(hexVal);
+            currentRgb = rgb;
+
+            document.getElementById('rSlider').value = rgb.r;
+            document.getElementById('gSlider').value = rgb.g;
+            document.getElementById('bSlider').value = rgb.b;
+
+            document.getElementById('rVal').innerText = rgb.r;
+            document.getElementById('gVal').innerText = rgb.g;
+            document.getElementById('bVal').innerText = rgb.b;
+
+            updateAllVisuals();
+        }
+
+        function setPresetColor(r, g, b) {
+            currentRgb = { r, g, b };
+            document.getElementById('rSlider').value = r;
+            document.getElementById('gSlider').value = g;
+            document.getElementById('bSlider').value = b;
+            document.getElementById('rVal').innerText = r;
+            document.getElementById('gVal').innerText = g;
+            document.getElementById('bVal').innerText = b;
+            document.getElementById('nativePicker').value = rgbToHex(r, g, b);
+
+            updateAllVisuals();
+        }
+
+        function switchColorSpace(spaceKey) {
+            currentSpace = spaceKey;
+
+            // Toggle active UI tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab${spaceKey}`).classList.add('active');
+
+            // Show/Hide CMYK slider
+            const cmykCtrl = document.getElementById('cmykKeyControl');
+            if (spaceKey === 'CMYK') cmykCtrl.classList.remove('hidden');
+            else cmykCtrl.classList.add('hidden');
+
+            updateTheoryPanel();
+            updateAxisLegendUI();
+            buildCurrentSpaceGeometry();
+            updateAllVisuals();
+        }
+
+        function setRenderMode(mode) {
+            currentRenderMode = mode;
+
+            // Reset button highlights
+            ['points', 'solid', 'wireframe', 'slice'].forEach(m => {
+                const btn = document.getElementById(`mode${m.charAt(0).toUpperCase() + m.slice(1)}`);
+                if (m === mode) {
+                    btn.className = "px-3 py-2 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 text-xs font-medium flex items-center justify-center space-x-1.5 transition";
+                } else {
+                    btn.className = "px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs font-medium flex items-center justify-center space-x-1.5 transition";
+                }
+            });
+
+            // Toggle density slider visibility
+            const pointCtrl = document.getElementById('pointCloudControls');
+            if (mode === 'points' || mode === 'slice') pointCtrl.classList.remove('hidden');
+            else pointCtrl.classList.add('hidden');
+
+            buildCurrentSpaceGeometry();
+        }
+
+        function updateDensity(val) {
+            voxelDensity = val;
+            document.getElementById('densityVal').innerText = `${val}×${val}×${val}`;
+            buildCurrentSpaceGeometry();
+        }
+
+        function updateParticleSize(val) {
+            particleSize = val;
+            document.getElementById('particleSizeVal').innerText = val;
+            if (spaceGroup.children[0] && spaceGroup.children[0].material) {
+                spaceGroup.children[0].material.size = parseFloat(val);
+            }
+        }
+
+        function updateCmykK(val) {
+            cmykKVal = parseFloat(val);
+            document.getElementById('kVal').innerText = `${Math.round(cmykKVal * 100)}%`;
+            buildCurrentSpaceGeometry();
+            updateAllVisuals();
+        }
+
+        function updateSlices() {
+            slices.x = parseInt(document.getElementById('sliceX').value);
+            slices.y = parseInt(document.getElementById('sliceY').value);
+            slices.z = parseInt(document.getElementById('sliceZ').value);
+
+            document.getElementById('sliceXVal').innerText = `${slices.x}%`;
+            document.getElementById('sliceYVal').innerText = `${slices.y}%`;
+            document.getElementById('sliceZVal').innerText = `${slices.z}%`;
+
+            // Adjust clipping plane constants
+            clippingPlanes[0].constant = (slices.x / 100 - 0.5) * SPACE_SCALE;
+            clippingPlanes[1].constant = (slices.y / 100 - 0.5) * SPACE_SCALE;
+            clippingPlanes[2].constant = (slices.z / 100 - 0.5) * SPACE_SCALE;
+        }
+
+        function resetSlices() {
+            document.getElementById('sliceX').value = 100;
+            document.getElementById('sliceY').value = 100;
+            document.getElementById('sliceZ').value = 100;
+            updateSlices();
+        }
+
+        function toggleAutoRotate() {
+            isAutoRotating = !isAutoRotating;
+            controls.autoRotate = isAutoRotating;
+            controls.autoRotateSpeed = 2.0;
+
+            const btn = document.getElementById('btnAutoRotate');
+            if (isAutoRotating) {
+                btn.classList.add('bg-blue-600/30', 'border-blue-500');
+            } else {
+                btn.classList.remove('bg-blue-600/30', 'border-blue-500');
+            }
+        }
+
+        function resetCameraView() {
+            controls.reset();
+            camera.position.set(6, 4.5, 7.5);
+            controls.target.set(0, 0, 0);
+        }
+
+        function toggleAxes() {
+            showAxes = !showAxes;
+            axesGroup.visible = showAxes;
+            document.getElementById('btnToggleAxes').style.opacity = showAxes ? '1' : '0.4';
+        }
+
+        function toggleProbe() {
+            showProbe = !showProbe;
+            probeGroup.visible = showProbe;
+            document.getElementById('btnToggleProbe').style.opacity = showProbe ? '1' : '0.4';
+        }
+
+        // Raycasting on canvas click to pick color in 3D
+        function onCanvasClick(event) {
+            if (event.button !== 0) return; // Only left click
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(spaceGroup.children, true);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                let hitColor = null;
+
+                if (hit.color) {
+                    hitColor = hit.color;
+                } else if (hit.point) {
+                    // Reverse calculate RGB from 3D space coordinate
+                    const p = hit.point;
+                    if (currentSpace === 'RGB') {
+                        hitColor = new THREE.Color(
+                            (p.x / SPACE_SCALE) + 0.5,
+                            (p.y / SPACE_SCALE) + 0.5,
+                            (p.z / SPACE_SCALE) + 0.5
+                        );
+                    } else if (currentSpace === 'HSV') {
+                        let radius = Math.sqrt(p.x * p.x + p.z * p.z);
+                        let s = Math.min(radius / (SPACE_SCALE / 2), 1.0);
+                        let v = Math.min(Math.max((p.y / SPACE_SCALE) + 0.5, 0), 1);
+                        let angle = Math.atan2(p.z, p.x);
+                        let hDeg = (angle < 0 ? angle + Math.PI * 2 : angle) * (180 / Math.PI);
+                        let rgb = hsvToRgb(hDeg, s, v);
+                        hitColor = new THREE.Color(rgb.r, rgb.g, rgb.b);
+                    }
+                }
+
+                if (hitColor) {
+                    let r = Math.round(Math.min(Math.max(hitColor.r, 0), 1) * 255);
+                    let g = Math.round(Math.min(Math.max(hitColor.g, 0), 1) * 255);
+                    let b = Math.round(Math.min(Math.max(hitColor.b, 0), 1) * 255);
+                    setPresetColor(r, g, b);
+                }
+            }
+        }
+
+        /* ========================================================================
+         * UI REAL-TIME ANALYTICS & THEORY UPDATER
+         * ======================================================================== */
+        
+        function updateAllVisuals() {
+            const rNorm = currentRgb.r / 255;
+            const gNorm = currentRgb.g / 255;
+            const bNorm = currentRgb.b / 255;
+
+            const hex = rgbToHex(currentRgb.r, currentRgb.g, currentRgb.b);
+            const hsv = rgbToHsv(rNorm, gNorm, bNorm);
+            const hsi = rgbToHsi(rNorm, gNorm, bNorm);
+            const ycbcr = rgbToYcbcr(rNorm, gNorm, bNorm);
+            const cmyk = rgbToCmyk(rNorm, gNorm, bNorm);
+
+            // Update Swatch & Labels
+            document.getElementById('colorSwatch').style.backgroundColor = hex;
+            document.getElementById('hexBadge').innerHTML = `<span>${hex}</span><i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500"></i>`;
+            document.getElementById('rgbCssLabel').innerText = `rgb(${currentRgb.r}, ${currentRgb.g}, ${currentRgb.b})`;
+
+            // Update Conversion Panel Cards
+            document.getElementById('convRgb').innerText = `${currentRgb.r}, ${currentRgb.g}, ${currentRgb.b} (${rNorm.toFixed(2)}, ${gNorm.toFixed(2)}, ${bNorm.toFixed(2)})`;
+            document.getElementById('convHsv').innerText = `${hsv.h}°, ${Math.round(hsv.s * 100)}%, ${Math.round(hsv.v * 100)}%`;
+            document.getElementById('convHsi').innerText = `${hsi.h}°, ${Math.round(hsi.s * 100)}%, ${Math.round(hsi.i * 100)}%`;
+            document.getElementById('convYcbcr').innerText = `Y:${Math.round(ycbcr.y * 255)} Cb:${Math.round(ycbcr.cb * 255)} Cr:${Math.round(ycbcr.cr * 255)}`;
+            document.getElementById('convCmyk').innerText = `C:${Math.round(cmyk.c * 100)}% M:${Math.round(cmyk.m * 100)}% Y:${Math.round(cmyk.y * 100)}% K:${Math.round(cmyk.k * 100)}%`;
+
+            // Reposition Probe in 3D Space
+            updateProbePosition();
+
+            // Re-render lucide icons inside updated HTML badges
+            lucide.createIcons();
+        }
+
+        function updateTheoryPanel() {
+            const data = THEORY_DATA[currentSpace];
+            if (!data) return;
+
+            document.getElementById('theoryTitle').innerText = data.title;
+            document.getElementById('theoryDescription').innerText = data.desc;
+
+            const axisListHtml = data.axes.map(ax => `<li>${ax}</li>`).join('');
+            document.getElementById('theoryAxesList').innerHTML = axisListHtml;
+
+            document.getElementById('theoryMath').innerText = data.math;
+            document.getElementById('theoryApps').innerText = data.apps;
+
+            document.getElementById('activeSpaceLabel').innerText = `${currentSpace} COLOR SPACE`;
+        }
+
+        function updateAxisLegendUI() {
+            const legX = document.getElementById('axisLegendX');
+            const legY = document.getElementById('axisLegendY');
+            const legZ = document.getElementById('axisLegendZ');
+
+            if (currentSpace === 'RGB') {
+                legX.innerHTML = `<span class="w-3 h-3 rounded-full bg-red-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">X: Red (R) [0 - 255]</span>`;
+                legY.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Y: Green (G) [0 - 255]</span>`;
+                legZ.innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Z: Blue (B) [0 - 255]</span>`;
+            } else if (currentSpace === 'HSV') {
+                legX.innerHTML = `<span class="w-3 h-3 rounded-full bg-red-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Angle: Hue (0° - 360°)</span>`;
+                legY.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Vertical: Value (0 - 1)</span>`;
+                legZ.innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Radius: Saturation (0 - 1)</span>`;
+            } else if (currentSpace === 'HSI') {
+                legX.innerHTML = `<span class="w-3 h-3 rounded-full bg-red-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Angle: Hue (0° - 360°)</span>`;
+                legY.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Vertical: Intensity (0 - 1)</span>`;
+                legZ.innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Radius: Saturation (0 - 1)</span>`;
+            } else if (currentSpace === 'YCbCr') {
+                legX.innerHTML = `<span class="w-3 h-3 rounded-full bg-red-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">X: Cb (Blue difference)</span>`;
+                legY.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Y: Luminance (Y)</span>`;
+                legZ.innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Z: Cr (Red difference)</span>`;
+            } else if (currentSpace === 'CMYK') {
+                legX.innerHTML = `<span class="w-3 h-3 rounded-full bg-cyan-400 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">X: Cyan Ink (0% - 100%)</span>`;
+                legY.innerHTML = `<span class="w-3 h-3 rounded-full bg-yellow-400 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Y: Yellow Ink (0% - 100%)</span>`;
+                legZ.innerHTML = `<span class="w-3 h-3 rounded-full bg-pink-500 shrink-0"></span><span class="font-mono text-[11px] text-slate-300">Z: Magenta Ink (0% - 100%)</span>`;
+            }
+        }
+
+        function copyText(str) {
+            // Document execCommand fallback for iFrame compatibility
+            const el = document.createElement('textarea');
+            el.value = str;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast(`Copied "${str}" to clipboard!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvasContainer');
+            if (!container) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        /* ========================================================================
+         * ANIMATION RENDER LOOP
+         * ======================================================================== */
+        
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Orbit controls update
+            controls.update();
+
+            // Pulse animation for Probe marker
+            if (probeMesh) {
+                const time = Date.now() * 0.003;
+                const scale = 1 + Math.sin(time) * 0.08;
+                probeMesh.scale.set(scale, scale, scale);
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
