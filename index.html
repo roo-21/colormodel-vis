@@ -224,18 +224,42 @@
     </section>
 
     <section class="space-y-2">
-      <div class="flex items-center justify-between">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <i class="fa-solid fa-palette text-pink-400"></i> Presets
-        </h2>
-        <div class="flex gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
-          <button data-cat="primary" class="preset-cat-btn px-1.5 py-0.5 rounded transition-all bg-indigo-600 text-white font-semibold">Primary</button>
-          <button data-cat="pastels" class="preset-cat-btn px-1.5 py-0.5 rounded transition-all text-slate-400 hover:text-slate-200">Pastels</button>
-          <button data-cat="neons" class="preset-cat-btn px-1.5 py-0.5 rounded transition-all text-slate-400 hover:text-slate-200">Neons</button>
-          <button data-cat="skin" class="preset-cat-btn px-1.5 py-0.5 rounded transition-all text-slate-400 hover:text-slate-200">Natural</button>
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+        <i class="fa-solid fa-knife text-orange-400"></i> Slice Controls
+      </h2>
+      <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 space-y-2.5 max-h-48 overflow-y-auto">
+        <div class="space-y-1">
+          <div class="flex justify-between text-[10px] font-mono">
+            <span class="text-orange-300 font-medium">X Axis</span>
+            <span id="valXRange" class="text-slate-300 text-[9px]">Full</span>
+          </div>
+          <div class="flex gap-1 items-center">
+            <input type="range" id="sliceXMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-orange-500">
+            <input type="range" id="sliceXMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-orange-500">
+          </div>
         </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-[10px] font-mono">
+            <span class="text-cyan-300 font-medium">Y Axis</span>
+            <span id="valYRange" class="text-slate-300 text-[9px]">Full</span>
+          </div>
+          <div class="flex gap-1 items-center">
+            <input type="range" id="sliceYMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-cyan-500">
+            <input type="range" id="sliceYMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-cyan-500">
+          </div>
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-[10px] font-mono">
+            <span class="text-pink-300 font-medium">Z Axis</span>
+            <span id="valZRange" class="text-slate-300 text-[9px]">Full</span>
+          </div>
+          <div class="flex gap-1 items-center">
+            <input type="range" id="sliceZMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-pink-500">
+            <input type="range" id="sliceZMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-pink-500">
+          </div>
+        </div>
+        <button id="btnResetSlice" class="copy-btn w-full text-center mt-1">Reset Slice</button>
       </div>
-      <div id="presetsContainer" class="flex flex-wrap gap-1.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800 justify-start"></div>
     </section>
 
     <section class="space-y-2 flex-1 min-h-0 flex flex-col">
@@ -331,28 +355,36 @@
     </div>
   </aside>
 
-  <div id="leanDescBanner" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 glass-panel px-4 py-2 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-between gap-6 max-w-4xl w-[calc(100%-2rem)] transition-all">
-    <div class="flex items-center gap-3 shrink-0">
-      <div id="descSpaceIcon" class="w-7 h-7 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 text-xs">
-        <i class="fa-solid fa-cube"></i>
+  <div id="leanDescBanner" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 glass-panel px-4 py-3 rounded-2xl border border-slate-800 shadow-2xl flex flex-col gap-3 max-w-5xl w-[calc(100%-2rem)] transition-all">
+    <div class="flex items-center justify-between gap-6">
+      <div class="flex items-center gap-3 shrink-0">
+        <div id="descSpaceIcon" class="w-7 h-7 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 text-xs">
+          <i class="fa-solid fa-cube"></i>
+        </div>
+        <div>
+          <h3 id="descSpaceTitle" class="font-bold text-xs text-white leading-tight">RGB</h3>
+          <p id="descSpaceGeometry" class="text-[10px] text-slate-400 font-mono">Cube Geometry</p>
+        </div>
       </div>
-      <div>
-        <h3 id="descSpaceTitle" class="font-bold text-xs text-white leading-tight">RGB</h3>
-        <p id="descSpaceGeometry" class="text-[10px] text-slate-400 font-mono">Cube Geometry</p>
+      <div class="hidden md:block text-[11px] text-slate-300 truncate max-w-xs border-l border-slate-800 pl-4">
+        <span class="text-slate-500 font-bold uppercase text-[9px] block">Primary Uses:</span>
+        <span id="descSpaceUses" class="truncate">Digital displays, web technologies, computer graphics.</span>
       </div>
     </div>
-    <div class="hidden md:block text-[11px] text-slate-300 truncate max-w-xs border-l border-slate-800 pl-4">
-      <span class="text-slate-500 font-bold uppercase text-[9px] block">Primary Uses:</span>
-      <span id="descSpaceUses" class="truncate">Digital displays, web technologies, computer graphics.</span>
+    
+    <!-- Color Presets Row -->
+    <div class="flex items-center gap-2 flex-wrap border-t border-slate-700/50 pt-2">
+      <div class="flex gap-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[9px] shrink-0">
+        <button data-cat="primary" class="preset-cat-btn px-1 py-0.5 rounded transition-all bg-indigo-600 text-white font-semibold text-[8px]">Primary</button>
+        <button data-cat="pastels" class="preset-cat-btn px-1 py-0.5 rounded transition-all text-slate-400 hover:text-slate-200 text-[8px]">Pastels</button>
+        <button data-cat="neons" class="preset-cat-btn px-1 py-0.5 rounded transition-all text-slate-400 hover:text-slate-200 text-[8px]">Neons</button>
+        <button data-cat="skin" class="preset-cat-btn px-1 py-0.5 rounded transition-all text-slate-400 hover:text-slate-200 text-[8px]">Natural</button>
+      </div>
+      <div id="presetsContainer" class="flex flex-wrap gap-1.5 flex-1"></div>
     </div>
   </div>
 
-  <div class="absolute top-20 right-4 z-10 pointer-events-none glass-panel px-3 py-1.5 rounded-xl border border-slate-800 text-[11px] font-mono space-y-0.5">
-    <div class="text-[9px] text-slate-400 uppercase font-bold tracking-wider flex items-center gap-1">
-      <i class="fa-solid fa-crosshairs text-indigo-400"></i> 3D Position
-    </div>
-    <div id="hudCoordinates" class="text-indigo-300 font-semibold">X: 0.00 | Y: 0.00 | Z: 0.00</div>
-  </div>
+
 
   <div id="toast" class="fixed bottom-16 right-6 z-50 glass-panel border border-indigo-500/40 text-slate-100 px-3.5 py-2 rounded-xl shadow-2xl font-medium text-xs flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
     <i class="fa-solid fa-circle-check text-emerald-400"></i>
@@ -574,7 +606,12 @@
       showGrid: true,
       autoRotate: false,
       sidebarOpen: true,
-      descPanelOpen: false
+      descPanelOpen: false,
+      sliceBounds: {
+        xMin: -2, xMax: 2,
+        yMin: -2, yMax: 2,
+        zMin: -2, zMax: 2
+      }
     };
 
     const el = {
@@ -587,9 +624,6 @@
       hexInput: document.getElementById('hexInput'),
       nativeColorPicker: document.getElementById('nativeColorPicker'),
       pickerSwatchPreview: document.getElementById('pickerSwatchPreview'),
-      headerColorSwatch: document.getElementById('headerColorSwatch'),
-      headerHexCode: document.getElementById('headerHexCode'),
-      headerRgbCode: document.getElementById('headerRgbCode'),
       presetsContainer: document.getElementById('presetsContainer'),
       btnResetCamera: document.getElementById('btnResetCamera'),
       btnToggleRotate: document.getElementById('btnToggleRotate'),
@@ -607,9 +641,18 @@
       selectCloudDensity: document.getElementById('selectCloudDensity'),
       sliderParticleSize: document.getElementById('sliderParticleSize'),
       valParticleSize: document.getElementById('valParticleSize'),
+      sliceXMin: document.getElementById('sliceXMin'),
+      sliceXMax: document.getElementById('sliceXMax'),
+      sliceYMin: document.getElementById('sliceYMin'),
+      sliceYMax: document.getElementById('sliceYMax'),
+      sliceZMin: document.getElementById('sliceZMin'),
+      sliceZMax: document.getElementById('sliceZMax'),
+      valXRange: document.getElementById('valXRange'),
+      valYRange: document.getElementById('valYRange'),
+      valZRange: document.getElementById('valZRange'),
+      btnResetSlice: document.getElementById('btnResetSlice'),
       toast: document.getElementById('toast'),
       toastMsg: document.getElementById('toastMsg'),
-      hudCoordinates: document.getElementById('hudCoordinates'),
       matrixRGB: document.getElementById('matrixRGB'),
       matrixHSV: document.getElementById('matrixHSV'),
       matrixHSI: document.getElementById('matrixHSI'),
@@ -788,14 +831,14 @@
       if (pointCloud) scene.remove(pointCloud);
 
       const count = parseInt(state.pointDensity);
-      const positions = new Float32Array(count * 3);
-      const colors = new Float32Array(count * 3);
+      const tempPositions = [];
+      const tempColors = [];
       const rgbArray = [];
 
       const steps = Math.cbrt(count);
       const stepSize = 1 / steps;
 
-      let idx = 0;
+      // First pass: collect all valid particles
       for (let x = 0; x < steps; x++) {
         for (let y = 0; y < steps; y++) {
           for (let z = 0; z < steps; z++) {
@@ -805,19 +848,24 @@
 
             const pos = colorTo3DPosition(r, g, b, state.activeSpace);
 
-            positions[idx * 3] = pos.x;
-            positions[idx * 3 + 1] = pos.y;
-            positions[idx * 3 + 2] = pos.z;
+            // Check if position is within slice bounds
+            const { xMin, xMax, yMin, yMax, zMin, zMax } = state.sliceBounds;
+            const inBounds = pos.x >= xMin && pos.x <= xMax && 
+                            pos.y >= yMin && pos.y <= yMax && 
+                            pos.z >= zMin && pos.z <= zMax;
 
-            colors[idx * 3] = r;
-            colors[idx * 3 + 1] = g;
-            colors[idx * 3 + 2] = b;
-
-            rgbArray.push({ r, g, b });
-            idx++;
+            if (inBounds) {
+              tempPositions.push(pos.x, pos.y, pos.z);
+              tempColors.push(r, g, b);
+              rgbArray.push({ r, g, b });
+            }
           }
         }
       }
+
+      // Create properly sized arrays
+      const positions = new Float32Array(tempPositions);
+      const colors = new Float32Array(tempColors);
 
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -873,8 +921,6 @@
 
       const core = targetMarkerGroup.getObjectByName("markerCore");
       if (core) core.material.emissive.setRGB(state.r, state.g, state.b);
-
-      el.hudCoordinates.innerText = `X: ${pos.x.toFixed(2)} | Y: ${pos.y.toFixed(2)} | Z: ${pos.z.toFixed(2)}`;
     }
 
     function onCanvasPointerDown(event) {
@@ -1124,6 +1170,82 @@
         state.pointDensity = parseInt(e.target.value);
         rebuildPointCloud();
         showToast(`Density: ${state.pointDensity.toLocaleString()} pts`);
+      });
+
+      // SLICE CONTROLS
+      const updateSliceBounds = () => {
+        state.sliceBounds = {
+          xMin: parseFloat(el.sliceXMin.value),
+          xMax: parseFloat(el.sliceXMax.value),
+          yMin: parseFloat(el.sliceYMin.value),
+          yMax: parseFloat(el.sliceYMax.value),
+          zMin: parseFloat(el.sliceZMin.value),
+          zMax: parseFloat(el.sliceZMax.value)
+        };
+
+        // Update labels
+        const xRange = state.sliceBounds.xMin === -2 && state.sliceBounds.xMax === 2 ? 'Full' : `${state.sliceBounds.xMin.toFixed(1)} to ${state.sliceBounds.xMax.toFixed(1)}`;
+        const yRange = state.sliceBounds.yMin === -2 && state.sliceBounds.yMax === 2 ? 'Full' : `${state.sliceBounds.yMin.toFixed(1)} to ${state.sliceBounds.yMax.toFixed(1)}`;
+        const zRange = state.sliceBounds.zMin === -2 && state.sliceBounds.zMax === 2 ? 'Full' : `${state.sliceBounds.zMin.toFixed(1)} to ${state.sliceBounds.zMax.toFixed(1)}`;
+        
+        el.valXRange.innerText = xRange;
+        el.valYRange.innerText = yRange;
+        el.valZRange.innerText = zRange;
+
+        rebuildPointCloud();
+      };
+
+      el.sliceXMin.addEventListener('input', () => {
+        if (parseFloat(el.sliceXMin.value) > parseFloat(el.sliceXMax.value)) {
+          el.sliceXMin.value = el.sliceXMax.value;
+        }
+        updateSliceBounds();
+      });
+
+      el.sliceXMax.addEventListener('input', () => {
+        if (parseFloat(el.sliceXMax.value) < parseFloat(el.sliceXMin.value)) {
+          el.sliceXMax.value = el.sliceXMin.value;
+        }
+        updateSliceBounds();
+      });
+
+      el.sliceYMin.addEventListener('input', () => {
+        if (parseFloat(el.sliceYMin.value) > parseFloat(el.sliceYMax.value)) {
+          el.sliceYMin.value = el.sliceYMax.value;
+        }
+        updateSliceBounds();
+      });
+
+      el.sliceYMax.addEventListener('input', () => {
+        if (parseFloat(el.sliceYMax.value) < parseFloat(el.sliceYMin.value)) {
+          el.sliceYMax.value = el.sliceYMin.value;
+        }
+        updateSliceBounds();
+      });
+
+      el.sliceZMin.addEventListener('input', () => {
+        if (parseFloat(el.sliceZMin.value) > parseFloat(el.sliceZMax.value)) {
+          el.sliceZMin.value = el.sliceZMax.value;
+        }
+        updateSliceBounds();
+      });
+
+      el.sliceZMax.addEventListener('input', () => {
+        if (parseFloat(el.sliceZMax.value) < parseFloat(el.sliceZMin.value)) {
+          el.sliceZMax.value = el.sliceZMin.value;
+        }
+        updateSliceBounds();
+      });
+
+      el.btnResetSlice.addEventListener('click', () => {
+        el.sliceXMin.value = -2;
+        el.sliceXMax.value = 2;
+        el.sliceYMin.value = -2;
+        el.sliceYMax.value = 2;
+        el.sliceZMin.value = -2;
+        el.sliceZMax.value = 2;
+        updateSliceBounds();
+        showToast("Slice Reset");
       });
     }
 
