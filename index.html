@@ -255,9 +255,17 @@
             <span class="text-orange-300 font-medium">X Axis</span>
             <span id="valXRange" class="text-slate-300 text-[9px]">Full</span>
           </div>
-          <div class="flex gap-1 items-center">
-            <input type="range" id="sliceXMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-orange-500">
-            <input type="range" id="sliceXMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-orange-500">
+          <div class="space-y-1.5 bg-slate-800/40 p-2 rounded-lg">
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[9px] text-orange-200 font-mono">Min:</label>
+              <input type="range" id="sliceXMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-orange-500">
+              <span id="valXMin" class="text-[9px] text-orange-300 font-mono w-7 text-right">-2.0</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[9px] text-orange-200 font-mono">Max:</label>
+              <input type="range" id="sliceXMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-orange-500">
+              <span id="valXMax" class="text-[9px] text-orange-300 font-mono w-7 text-right">2.0</span>
+            </div>
           </div>
         </div>
         <div class="space-y-1">
@@ -265,9 +273,17 @@
             <span class="text-cyan-300 font-medium">Y Axis</span>
             <span id="valYRange" class="text-slate-300 text-[9px]">Full</span>
           </div>
-          <div class="flex gap-1 items-center">
-            <input type="range" id="sliceYMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-cyan-500">
-            <input type="range" id="sliceYMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-cyan-500">
+          <div class="space-y-1.5 bg-slate-800/40 p-2 rounded-lg">
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[9px] text-cyan-200 font-mono">Min:</label>
+              <input type="range" id="sliceYMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-cyan-500">
+              <span id="valYMin" class="text-[9px] text-cyan-300 font-mono w-7 text-right">-2.0</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[9px] text-cyan-200 font-mono">Max:</label>
+              <input type="range" id="sliceYMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-cyan-500">
+              <span id="valYMax" class="text-[9px] text-cyan-300 font-mono w-7 text-right">2.0</span>
+            </div>
           </div>
         </div>
         <div class="space-y-1">
@@ -275,9 +291,17 @@
             <span class="text-pink-300 font-medium">Z Axis</span>
             <span id="valZRange" class="text-slate-300 text-[9px]">Full</span>
           </div>
-          <div class="flex gap-1 items-center">
-            <input type="range" id="sliceZMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-pink-500">
-            <input type="range" id="sliceZMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-pink-500">
+          <div class="space-y-1.5 bg-slate-800/40 p-2 rounded-lg">
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[9px] text-pink-200 font-mono">Min:</label>
+              <input type="range" id="sliceZMin" min="-2" max="2" step="0.1" value="-2" class="flex-1 accent-pink-500">
+              <span id="valZMin" class="text-[9px] text-pink-300 font-mono w-7 text-right">-2.0</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[9px] text-pink-200 font-mono">Max:</label>
+              <input type="range" id="sliceZMax" min="-2" max="2" step="0.1" value="2" class="flex-1 accent-pink-500">
+              <span id="valZMax" class="text-[9px] text-pink-300 font-mono w-7 text-right">2.0</span>
+            </div>
           </div>
         </div>
         <button id="btnResetSlice" class="copy-btn w-full text-center mt-1">Reset Slice</button>
@@ -673,6 +697,12 @@
       valXRange: document.getElementById('valXRange'),
       valYRange: document.getElementById('valYRange'),
       valZRange: document.getElementById('valZRange'),
+      valXMin: document.getElementById('valXMin'),
+      valXMax: document.getElementById('valXMax'),
+      valYMin: document.getElementById('valYMin'),
+      valYMax: document.getElementById('valYMax'),
+      valZMin: document.getElementById('valZMin'),
+      valZMax: document.getElementById('valZMax'),
       btnResetSlice: document.getElementById('btnResetSlice'),
       bgColorPicker: document.getElementById('bgColorPicker'),
       bgColorPreview: document.getElementById('bgColorPreview'),
@@ -767,6 +797,8 @@
 
       window.addEventListener('resize', onWindowResize);
       renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
+      renderer.domElement.addEventListener('mousemove', updateHoveredParticle);
+      renderer.domElement.addEventListener('mouseleave', onCanvasPointerLeave);
 
       rebuildPointCloud();
       updateTargetMarkerPosition();
@@ -980,6 +1012,9 @@
 
     function rebuildPointCloud() {
       if (pointCloud) scene.remove(pointCloud);
+      
+      // Clear hover state
+      hoveredIndex = null;
 
       const count = parseInt(state.pointDensity);
       const tempPositions = [];
@@ -1076,6 +1111,66 @@
       if (core) core.material.emissive.setRGB(state.r, state.g, state.b);
     }
 
+    let hoveredIndex = null;
+    const highlightColor = new THREE.Color(0xffffff);
+
+    function updateHoveredParticle(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      if (pointCloud) {
+        const intersects = raycaster.intersectObject(pointCloud);
+        
+        if (intersects.length > 0) {
+          const index = intersects[0].index;
+          const rgbArray = pointCloud.geometry.userData.rgbArray;
+          
+          // Only update if we're hovering over a different particle
+          if (index !== hoveredIndex && rgbArray && rgbArray[index]) {
+            // Clear previous highlight
+            if (hoveredIndex !== null) {
+              const colors = pointCloud.geometry.attributes.color;
+              const prevColor = rgbArray[hoveredIndex];
+              colors.setXYZ(hoveredIndex, prevColor.r, prevColor.g, prevColor.b);
+              colors.needsUpdate = true;
+            }
+
+            // Highlight new particle
+            hoveredIndex = index;
+            const colors = pointCloud.geometry.attributes.color;
+            colors.setXYZ(hoveredIndex, 1, 1, 1); // White highlight
+            colors.needsUpdate = true;
+
+            // Show RGB values in real-time
+            const picked = rgbArray[hoveredIndex];
+            const R = Math.round(picked.r * 255);
+            const G = Math.round(picked.g * 255);
+            const B = Math.round(picked.b * 255);
+            const hex = rgbToHex(picked.r, picked.g, picked.b);
+
+            el.hexInput.value = hex;
+            el.sliderR.value = R;
+            el.sliderG.value = G;
+            el.sliderB.value = B;
+            el.valR.innerText = R;
+            el.valG.innerText = G;
+            el.valB.innerText = B;
+            el.pickerSwatchPreview.style.backgroundColor = hex;
+          }
+        } else if (hoveredIndex !== null) {
+          // Clear highlight if mouse is not over any particle
+          const colors = pointCloud.geometry.attributes.color;
+          const prevColor = rgbArray[hoveredIndex];
+          colors.setXYZ(hoveredIndex, prevColor.r, prevColor.g, prevColor.b);
+          colors.needsUpdate = true;
+          hoveredIndex = null;
+        }
+      }
+    }
+
     function onCanvasPointerDown(event) {
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1091,8 +1186,21 @@
           if (rgbArray && rgbArray[index]) {
             const picked = rgbArray[index];
             updateGlobalColor(picked.r, picked.g, picked.b);
+            showToast(`Selected color`);
           }
         }
+      }
+    }
+
+    function onCanvasPointerLeave() {
+      // Clear highlight when leaving canvas
+      if (hoveredIndex !== null && pointCloud) {
+        const rgbArray = pointCloud.geometry.userData.rgbArray;
+        const colors = pointCloud.geometry.attributes.color;
+        const prevColor = rgbArray[hoveredIndex];
+        colors.setXYZ(hoveredIndex, prevColor.r, prevColor.g, prevColor.b);
+        colors.needsUpdate = true;
+        hoveredIndex = null;
       }
     }
 
@@ -1345,7 +1453,7 @@
           zMax: parseFloat(el.sliceZMax.value)
         };
 
-        // Update labels
+        // Update range labels
         const xRange = state.sliceBounds.xMin === -2 && state.sliceBounds.xMax === 2 ? 'Full' : `${state.sliceBounds.xMin.toFixed(1)} to ${state.sliceBounds.xMax.toFixed(1)}`;
         const yRange = state.sliceBounds.yMin === -2 && state.sliceBounds.yMax === 2 ? 'Full' : `${state.sliceBounds.yMin.toFixed(1)} to ${state.sliceBounds.yMax.toFixed(1)}`;
         const zRange = state.sliceBounds.zMin === -2 && state.sliceBounds.zMax === 2 ? 'Full' : `${state.sliceBounds.zMin.toFixed(1)} to ${state.sliceBounds.zMax.toFixed(1)}`;
@@ -1353,6 +1461,14 @@
         el.valXRange.innerText = xRange;
         el.valYRange.innerText = yRange;
         el.valZRange.innerText = zRange;
+
+        // Update individual slider value displays
+        el.valXMin.innerText = state.sliceBounds.xMin.toFixed(1);
+        el.valXMax.innerText = state.sliceBounds.xMax.toFixed(1);
+        el.valYMin.innerText = state.sliceBounds.yMin.toFixed(1);
+        el.valYMax.innerText = state.sliceBounds.yMax.toFixed(1);
+        el.valZMin.innerText = state.sliceBounds.zMin.toFixed(1);
+        el.valZMax.innerText = state.sliceBounds.zMax.toFixed(1);
 
         rebuildPointCloud();
       };
