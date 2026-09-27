@@ -144,7 +144,8 @@
   </nav>
 
   <!-- LEFT SIDEBAR -->
-  <aside id="sidebarPanel" class="absolute top-28 left-3 bottom-16 w-80 glass-panel rounded-2xl z-20 flex flex-col p-3.5 space-y-4 border border-slate-800/80 transition-all duration-300 overflow-hidden">
+  <aside id="sidebarPanel" class="absolute top-28 left-3 bottom-16 w-80 glass-panel rounded-2xl z-20 flex flex-col border border-slate-800/80 transition-all duration-300 overflow-hidden">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden flex flex-col space-y-4 p-3.5">
     <section class="space-y-2.5">
       <div class="flex items-center justify-between">
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -225,9 +226,30 @@
 
     <section class="space-y-2">
       <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+        <i class="fa-solid fa-fill-drip text-sky-400"></i> Background
+      </h2>
+      <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 space-y-2">
+        <div class="flex gap-1.5 flex-wrap">
+          <button data-bg="#020617" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #020617;" title="Black"></button>
+          <button data-bg="#0f172a" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #0f172a;" title="Dark Blue"></button>
+          <button data-bg="#1e293b" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #1e293b;" title="Slate"></button>
+          <button data-bg="#334155" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #334155;" title="Light Slate"></button>
+          <button data-bg="#64748b" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #64748b;" title="Medium Gray"></button>
+          <button data-bg="#cbd5e1" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #cbd5e1;" title="Light Gray"></button>
+          <button data-bg="#f1f5f9" class="bg-preset-btn w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-all" style="background-color: #f1f5f9;" title="White"></button>
+          <div class="relative group shrink-0">
+            <input type="color" id="bgColorPicker" value="#020617" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 opacity-0 absolute inset-0 z-10">
+            <div id="bgColorPreview" class="w-8 h-8 rounded-lg border-2 border-indigo-500 shadow-md group-hover:scale-110 transition-transform" style="background-color: #020617;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-2">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
         <i class="fa-solid fa-knife text-orange-400"></i> Slice Controls
       </h2>
-      <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 space-y-2.5 max-h-48 overflow-y-auto">
+      <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 space-y-2.5">
         <div class="space-y-1">
           <div class="flex justify-between text-[10px] font-mono">
             <span class="text-orange-300 font-medium">X Axis</span>
@@ -262,11 +284,11 @@
       </div>
     </section>
 
-    <section class="space-y-2 flex-1 min-h-0 flex flex-col">
+    <section class="space-y-2">
       <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
         <i class="fa-solid fa-calculator text-emerald-400"></i> Conversions
       </h2>
-      <div class="space-y-1 overflow-y-auto pr-0.5 flex-1 font-mono text-[11px]">
+      <div class="space-y-1 font-mono text-[11px]">
         <div class="glass-card px-2 py-1 rounded-md flex items-center justify-between border-l-2 border-indigo-500">
           <span class="font-bold text-indigo-300">RGB</span>
           <span id="matrixRGB" class="text-slate-200">59, 130, 246</span>
@@ -301,6 +323,7 @@
         </div>
       </div>
     </section>
+    </div>
   </aside>
 
   <!-- RIGHT INFO PANEL -->
@@ -651,6 +674,8 @@
       valYRange: document.getElementById('valYRange'),
       valZRange: document.getElementById('valZRange'),
       btnResetSlice: document.getElementById('btnResetSlice'),
+      bgColorPicker: document.getElementById('bgColorPicker'),
+      bgColorPreview: document.getElementById('bgColorPreview'),
       toast: document.getElementById('toast'),
       toastMsg: document.getElementById('toastMsg'),
       matrixRGB: document.getElementById('matrixRGB'),
@@ -827,6 +852,132 @@
       return new THREE.Vector3(x, y, z);
     }
 
+    function getEdgeColorsForSpace(space) {
+      const edges = [];
+
+      if (space === "RGB") {
+        // All 8 corners of RGB cube
+        edges.push(
+          { r: 0, g: 0, b: 0 }, // Black
+          { r: 1, g: 0, b: 0 }, // Red
+          { r: 0, g: 1, b: 0 }, // Green
+          { r: 0, g: 0, b: 1 }, // Blue
+          { r: 1, g: 1, b: 0 }, // Yellow
+          { r: 1, g: 0, b: 1 }, // Magenta
+          { r: 0, g: 1, b: 1 }, // Cyan
+          { r: 1, g: 1, b: 1 }  // White
+        );
+      } else if (space === "HSV") {
+        // Black, white, and pure hues
+        edges.push({ r: 0, g: 0, b: 0 }); // Black (V=0)
+        edges.push({ r: 1, g: 1, b: 1 }); // White (S=0, V=1)
+        // 12 hues at full saturation and value
+        for (let h = 0; h < 360; h += 30) {
+          const hsv = { h, s: 1, v: 1 };
+          const max = hsv.v;
+          const min = max * (1 - hsv.s);
+          const d = max - min;
+          let r, g, b;
+          const h_prime = hsv.h / 60;
+          const c = d;
+          const x = c * (1 - Math.abs((h_prime % 2) - 1));
+          
+          if (h_prime >= 0 && h_prime < 1) { r = c; g = x; b = 0; }
+          else if (h_prime >= 1 && h_prime < 2) { r = x; g = c; b = 0; }
+          else if (h_prime >= 2 && h_prime < 3) { r = 0; g = c; b = x; }
+          else if (h_prime >= 3 && h_prime < 4) { r = 0; g = x; b = c; }
+          else if (h_prime >= 4 && h_prime < 5) { r = x; g = 0; b = c; }
+          else { r = c; g = 0; b = x; }
+          
+          r += min; g += min; b += min;
+          edges.push({ r, g, b });
+        }
+      } else if (space === "HSL") {
+        edges.push({ r: 0, g: 0, b: 0 }); // Black (L=0)
+        edges.push({ r: 1, g: 1, b: 1 }); // White (L=1)
+        // 12 hues at full saturation and 50% lightness (pure colors)
+        for (let h = 0; h < 360; h += 30) {
+          const hsl = { h, s: 1, l: 0.5 };
+          const c = (1 - Math.abs(2 * hsl.l - 1)) * hsl.s;
+          const h_prime = hsl.h / 60;
+          const x = c * (1 - Math.abs((h_prime % 2) - 1));
+          const m = hsl.l - c / 2;
+          
+          let r, g, b;
+          if (h_prime >= 0 && h_prime < 1) { r = c; g = x; b = 0; }
+          else if (h_prime >= 1 && h_prime < 2) { r = x; g = c; b = 0; }
+          else if (h_prime >= 2 && h_prime < 3) { r = 0; g = c; b = x; }
+          else if (h_prime >= 3 && h_prime < 4) { r = 0; g = x; b = c; }
+          else if (h_prime >= 4 && h_prime < 5) { r = x; g = 0; b = c; }
+          else { r = c; g = 0; b = x; }
+          
+          r += m; g += m; b += m;
+          edges.push({ r, g, b });
+        }
+      } else if (space === "HSI") {
+        edges.push({ r: 0, g: 0, b: 0 }); // Black
+        edges.push({ r: 1, g: 1, b: 1 }); // White
+        // Sample hues at S=1, I=0.5 (approximate pure colors)
+        for (let h = 0; h < 360; h += 30) {
+          const hsl = { h, s: 1, l: 0.5 }; // Use HSL for approximation
+          const c = (1 - Math.abs(2 * hsl.l - 1)) * hsl.s;
+          const h_prime = hsl.h / 60;
+          const x = c * (1 - Math.abs((h_prime % 2) - 1));
+          const m = hsl.l - c / 2;
+          
+          let r, g, b;
+          if (h_prime >= 0 && h_prime < 1) { r = c; g = x; b = 0; }
+          else if (h_prime >= 1 && h_prime < 2) { r = x; g = c; b = 0; }
+          else if (h_prime >= 2 && h_prime < 3) { r = 0; g = c; b = x; }
+          else if (h_prime >= 3 && h_prime < 4) { r = 0; g = x; b = c; }
+          else if (h_prime >= 4 && h_prime < 5) { r = x; g = 0; b = c; }
+          else { r = c; g = 0; b = x; }
+          
+          r += m; g += m; b += m;
+          edges.push({ r, g, b });
+        }
+      } else if (space === "YCbCr") {
+        // Min/max of each component
+        edges.push({ r: 0, g: 0, b: 0 }); // Black
+        edges.push({ r: 1, g: 1, b: 1 }); // White
+        edges.push({ r: 1, g: 0, b: 0 }); // Red
+        edges.push({ r: 0, g: 1, b: 0 }); // Green
+        edges.push({ r: 0, g: 0, b: 1 }); // Blue
+        edges.push({ r: 1, g: 1, b: 0 }); // Yellow
+        edges.push({ r: 1, g: 0, b: 1 }); // Magenta
+        edges.push({ r: 0, g: 1, b: 1 }); // Cyan
+      } else if (space === "CMYK") {
+        edges.push({ r: 0, g: 0, b: 0 }); // Black (K=1)
+        edges.push({ r: 1, g: 1, b: 1 }); // White (C=M=Y=K=0)
+        edges.push({ r: 1, g: 0, b: 0 }); // Red
+        edges.push({ r: 0, g: 1, b: 0 }); // Green
+        edges.push({ r: 0, g: 0, b: 1 }); // Blue
+        edges.push({ r: 1, g: 1, b: 0 }); // Yellow
+        edges.push({ r: 1, g: 0, b: 1 }); // Magenta
+        edges.push({ r: 0, g: 1, b: 1 }); // Cyan
+      } else if (space === "YUV") {
+        edges.push({ r: 0, g: 0, b: 0 }); // Black
+        edges.push({ r: 1, g: 1, b: 1 }); // White
+        edges.push({ r: 1, g: 0, b: 0 }); // Red
+        edges.push({ r: 0, g: 1, b: 0 }); // Green
+        edges.push({ r: 0, g: 0, b: 1 }); // Blue
+        edges.push({ r: 1, g: 1, b: 0 }); // Yellow
+        edges.push({ r: 1, g: 0, b: 1 }); // Magenta
+        edges.push({ r: 0, g: 1, b: 1 }); // Cyan
+      } else if (space === "CIELAB") {
+        edges.push({ r: 0, g: 0, b: 0 }); // Black
+        edges.push({ r: 1, g: 1, b: 1 }); // White
+        edges.push({ r: 1, g: 0, b: 0 }); // Red
+        edges.push({ r: 0, g: 1, b: 0 }); // Green
+        edges.push({ r: 0, g: 0, b: 1 }); // Blue
+        edges.push({ r: 1, g: 1, b: 0 }); // Yellow
+        edges.push({ r: 1, g: 0, b: 1 }); // Magenta
+        edges.push({ r: 0, g: 1, b: 1 }); // Cyan
+      }
+
+      return edges;
+    }
+
     function rebuildPointCloud() {
       if (pointCloud) scene.remove(pointCloud);
 
@@ -835,16 +986,18 @@
       const tempColors = [];
       const rgbArray = [];
 
+      // Single unified grid approach: includes edges naturally
+      // Calculate grid dimensions to match desired point count
       const steps = Math.cbrt(count);
-      const stepSize = 1 / steps;
+      const stepSize = 1 / (steps - 1); // -1 so we go from 0 to 1 inclusive
 
-      // First pass: collect all valid particles
+      // Generate regular grid covering full [0, 1]³ space
       for (let x = 0; x < steps; x++) {
         for (let y = 0; y < steps; y++) {
           for (let z = 0; z < steps; z++) {
-            const r = Math.min(1, Math.max(0, x * stepSize + Math.random() * stepSize * 0.5));
-            const g = Math.min(1, Math.max(0, y * stepSize + Math.random() * stepSize * 0.5));
-            const b = Math.min(1, Math.max(0, z * stepSize + Math.random() * stepSize * 0.5));
+            const r = Math.min(1, x * stepSize); // Clamp to handle floating point
+            const g = Math.min(1, y * stepSize);
+            const b = Math.min(1, z * stepSize);
 
             const pos = colorTo3DPosition(r, g, b, state.activeSpace);
 
@@ -1085,6 +1238,15 @@
       });
     }
 
+    function updateBackgroundColor(hexColor) {
+      if (scene) {
+        scene.background = new THREE.Color(hexColor);
+      }
+      el.bgColorPicker.value = hexColor;
+      el.bgColorPreview.style.backgroundColor = hexColor;
+      showToast(`Background: ${hexColor}`);
+    }
+
     function attachEventListeners() {
       const onSliderChange = () => {
         const r = parseInt(el.sliderR.value) / 255;
@@ -1247,6 +1409,27 @@
         updateSliceBounds();
         showToast("Slice Reset");
       });
+
+      // BACKGROUND COLOR CONTROLS
+      document.querySelectorAll('.bg-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const hex = btn.getAttribute('data-bg');
+          updateBackgroundColor(hex);
+          // Update active state
+          document.querySelectorAll('.bg-preset-btn').forEach(b => {
+            b.style.borderColor = '#475569';
+          });
+          btn.style.borderColor = '#60a5fa';
+        });
+      });
+
+      el.bgColorPicker.addEventListener('input', (e) => {
+        updateBackgroundColor(e.target.value);
+        // Update preset buttons to show custom color selected
+        document.querySelectorAll('.bg-preset-btn').forEach(b => {
+          b.style.borderColor = '#475569';
+        });
+      });
     }
 
     function showToast(msg) {
@@ -1265,6 +1448,12 @@
       renderPresets("primary");
       renderSpaceInfo("RGB");
       updateGlobalColor(state.r, state.g, state.b);
+      
+      // Set initial background button state (first button - black)
+      const firstBgBtn = document.querySelector('.bg-preset-btn');
+      if (firstBgBtn) {
+        firstBgBtn.style.borderColor = '#60a5fa';
+      }
     };
   </script>
 </body>
